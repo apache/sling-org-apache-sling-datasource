@@ -31,7 +31,7 @@
 
   <artifactId>org.apache.sling.datasource</artifactId>
   <packaging>bundle</packaging>
-  <version>1.0.3-SNAPSHOT</version>
+  <version>1.0.4</version>
 
   <name>Apache Sling DataSource Provider</name>
   <description>
@@ -54,6 +54,7 @@
     <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-datasource.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-datasource.git</developerConnection>
     <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-datasource.git</url>
+    <tag>org.apache.sling.datasource-1.0.4</tag>
   </scm>
 
 
