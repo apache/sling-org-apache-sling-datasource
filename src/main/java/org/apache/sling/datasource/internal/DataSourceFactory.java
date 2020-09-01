@@ -78,9 +78,6 @@ public class DataSourceFactory {
     @Property
     static final String PROP_USERNAME = "username";
 
-    @Property(passwordValue = "")
-    static final String PROP_PASSWORD = "password";
-
     /**
      * Value indicating default value should be used. if the value is set to
      * this value then that value would be treated as null

@@ -39,6 +39,14 @@
     for more details
   </description>
 
+  <distributionManagement>
+    <repository>
+      <id>Central Maven repository</id>
+      <name>Central Maven repository https</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+  </distributionManagement>
+
   <properties>
     <pax.exam.version>3.4.0</pax.exam.version>
     <pax.url.version>1.6.0</pax.url.version>
@@ -48,6 +56,7 @@
     <bundle.file.name>
       ${bundle.build.name}/${project.build.finalName}.jar
     </bundle.file.name>
+    <org.ops4j.pax.url.mvn.localRepository>https://repo1.maven.org/maven2/</org.ops4j.pax.url.mvn.localRepository>
   </properties>
 
   <scm>
@@ -118,6 +127,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <version>1.6.0</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -192,6 +202,44 @@
       <version>${pax.url.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- Custom added -->
+    <dependency>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-inject</artifactId>
+      <version>3.4.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-extender-service</artifactId>
+      <version>3.4.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-invoker-junit</artifactId>
+      <version>3.4.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.base</groupId>
+      <artifactId>ops4j-base</artifactId>
+      <version>1.4.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.tipi</groupId>
+      <artifactId>org.ops4j.pax.tipi.junit</artifactId>
+      <version>4.11.0.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.logging</groupId>
+      <artifactId>pax-logging-api</artifactId>
+      <version>1.6.4</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- End Custom added -->
     <dependency>
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.configadmin</artifactId>
@@ -224,6 +272,18 @@
   </dependencies>
 
   <profiles>
+      <profile>
+          <activation>
+            <activeByDefault>true</activeByDefault>
+          </activation>
+          <id>default</id>
+          <repositories>
+              <repository>
+                  <id>private.repository</id>
+                  <url>https://repo1.maven.org/maven2</url>
+              </repository>
+          </repositories>
+      </profile>
     <!--
         copy the package such that IDEs may easily use it without
         setting the system property
