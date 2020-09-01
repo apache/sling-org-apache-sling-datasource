@@ -76,8 +76,6 @@ class DriverDataSource implements DataSource {
         if (usr != null) properties.setProperty(PoolUtilities.PROP_USER, usr);
         if (System.getenv("outreach.ds.pwd") != null) properties.setProperty(PoolUtilities.PROP_PASSWORD, System.getenv("outreach.ds.pwd"));
 
-        System.out.println("PWD is set too" + pwd);
-
         String driverURL = poolProperties.getUrl();
         Connection connection;
         try {
