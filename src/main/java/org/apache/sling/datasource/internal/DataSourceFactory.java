@@ -18,6 +18,26 @@
  */
 package org.apache.sling.datasource.internal;
 
+import org.apache.sling.commons.osgi.PropertiesUtil;
+import org.apache.tomcat.jdbc.pool.ConnectionPool;
+import org.apache.tomcat.jdbc.pool.DataSource;
+import org.apache.tomcat.jdbc.pool.PoolConfiguration;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.Designate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -29,156 +49,36 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.ConfigurationPolicy;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Modified;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.PropertyOption;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.sling.commons.osgi.PropertiesUtil;
-import org.apache.tomcat.jdbc.pool.ConnectionPool;
-import org.apache.tomcat.jdbc.pool.DataSource;
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceRegistration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.sling.datasource.internal.JNDIDataSourceFactory.PROP_DATASOURCE_NAME;
 
 @Component(
         name = DataSourceFactory.NAME,
-        label = "%datasource.component.name",
-        description = "%datasource.component.description",
-        metatype = true,
-        configurationFactory = true,
-        policy = ConfigurationPolicy.REQUIRE
-)
+        configurationPolicy = ConfigurationPolicy.REQUIRE)
+@Designate(ocd = DataSourceFactoryConfig.class, factory = true)
 public class DataSourceFactory {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
     public static final String NAME = "org.apache.sling.datasource.DataSourceFactory";
-
-    @Property
-    static final String PROP_DATASOURCE_NAME = "datasource.name";
-
-    @Property(value = PROP_DATASOURCE_NAME)
-    static final String PROP_DS_SVC_PROP_NAME = "datasource.svc.prop.name";
-
-    @Property
-    static final String PROP_DRIVERCLASSNAME = "driverClassName";
-
-    @Property
-    static final String PROP_URL = "url";
-
-    @Property
-    static final String PROP_USERNAME = "username";
-
-    @Property(passwordValue = "")
-    static final String PROP_PASSWORD = "password";
-
+    static final String PROP_DEFAULTAUTOCOMMIT = "defaultAutoCommit";
+    static final String PROP_DEFAULTREADONLY = "defaultReadOnly";
+    static final String PROP_DEFAULTTRANSACTIONISOLATION = "defaultTransactionIsolation";
+    static final String PROP_DATASOURCE_SVC_PROPS = "datasource.svc.properties";
     /**
      * Value indicating default value should be used. if the value is set to
      * this value then that value would be treated as null
      */
     static final String DEFAULT_VAL = "default";
 
-    @Property(value = DEFAULT_VAL, options = {
-            @PropertyOption(name = "Default", value = DEFAULT_VAL),
-            @PropertyOption(name = "true", value = "true"),
-            @PropertyOption(name = "false", value = "false")})
-    static final String PROP_DEFAULTAUTOCOMMIT = "defaultAutoCommit";
-
-    @Property(value = DEFAULT_VAL, options = {
-            @PropertyOption(name = "Default", value = DEFAULT_VAL),
-            @PropertyOption(name = "true", value = "true"),
-            @PropertyOption(name = "false", value = "false")})
-    static final String PROP_DEFAULTREADONLY = "defaultReadOnly";
-
-    @Property(value = DEFAULT_VAL, options = {
-            @PropertyOption(name = "Default", value = DEFAULT_VAL),
-            @PropertyOption(name = "NONE", value = "NONE"),
-            @PropertyOption(name = "READ_COMMITTED", value = "READ_COMMITTED"),
-            @PropertyOption(name = "READ_UNCOMMITTED", value = "READ_UNCOMMITTED"),
-            @PropertyOption(name = "REPEATABLE_READ", value = "REPEATABLE_READ"),
-            @PropertyOption(name = "SERIALIZABLE", value = "SERIALIZABLE")})
-    static final String PROP_DEFAULTTRANSACTIONISOLATION = "defaultTransactionIsolation";
-
-    @Property
-    static final String PROP_DEFAULTCATALOG = "defaultCatalog";
-
-    @Property(intValue = PoolProperties.DEFAULT_MAX_ACTIVE)
-    static final String PROP_MAXACTIVE = "maxActive";
-
-    @Property(intValue = PoolProperties.DEFAULT_MAX_ACTIVE)
-    static final String PROP_MAXIDLE = "maxIdle"; //defaults to maxActive
-
-    @Property(intValue = 10)
-    static final String PROP_MINIDLE = "minIdle"; //defaults to initialSize
-
-    @Property(intValue = 10)
-    static final String PROP_INITIALSIZE = "initialSize";
-
-    @Property(intValue = 30000)
-    static final String PROP_MAXWAIT = "maxWait";
-
-    @Property(intValue = 0)
-    static final String PROP_MAXAGE = "maxAge";
-
-    @Property(boolValue = false)
-    static final String PROP_TESTONBORROW = "testOnBorrow";
-
-    @Property(boolValue = false)
-    static final String PROP_TESTONRETURN = "testOnReturn";
-
-    @Property(boolValue = false)
-    static final String PROP_TESTWHILEIDLE = "testWhileIdle";
-
-    @Property
-    static final String PROP_VALIDATIONQUERY = "validationQuery";
-
-    @Property(intValue = -1)
-    static final String PROP_VALIDATIONQUERY_TIMEOUT = "validationQueryTimeout";
-
-    @Property(intValue = 5000)
-    protected static final String PROP_TIMEBETWEENEVICTIONRUNSMILLIS = "timeBetweenEvictionRunsMillis";
-
-    @Property(intValue = 60000)
-    protected static final String PROP_MINEVICTABLEIDLETIMEMILLIS = "minEvictableIdleTimeMillis";
-
-    @Property
-    protected static final String PROP_CONNECTIONPROPERTIES = "connectionProperties";
-
-    @Property
-    protected static final String PROP_INITSQL = "initSQL";
-
-    @Property(value = "StatementCache;SlowQueryReport(threshold=10000);ConnectionState")
-    protected static final String PROP_INTERCEPTORS = "jdbcInterceptors";
-
-    @Property(intValue = 30000)
-    protected static final String PROP_VALIDATIONINTERVAL = "validationInterval";
-
-    @Property(boolValue = true)
-    protected static final String PROP_LOGVALIDATIONERRORS = "logValidationErrors";
-
-    @Property(value = {}, cardinality = 1024)
-    static final String PROP_DATASOURCE_SVC_PROPS = "datasource.svc.properties";
-
     /**
      * Property names where we need to treat value 'default' as null
      */
     private static final Set<String> PROPS_WITH_DFEAULT =
-            Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
                     PROP_DEFAULTAUTOCOMMIT,
                     PROP_DEFAULTREADONLY,
                     PROP_DEFAULTTRANSACTIONISOLATION
             )));
-
-    private final Logger log = LoggerFactory.getLogger(getClass());
 
     @Reference
     private DriverRegistry driverRegistry;
@@ -196,12 +96,12 @@ public class DataSourceFactory {
     private BundleContext bundleContext;
 
     @Activate
-    protected void activate(BundleContext bundleContext, Map<String, ?> config) throws Exception {
+    protected void activate(BundleContext bundleContext, DataSourceFactoryConfig config, Map<String, ?> properties) throws Exception {
         this.bundleContext = bundleContext;
         name = getDataSourceName(config);
 
         checkArgument(name != null, "DataSource name must be specified via [%s] property", PROP_DATASOURCE_NAME);
-        dataSource = new LazyJmxRegisteringDataSource(createPoolConfig(config));
+        dataSource = new LazyJmxRegisteringDataSource(createPoolConfig(properties));
 
         svcPropName = getSvcPropName(config);
         registerDataSource(svcPropName);
@@ -210,20 +110,20 @@ public class DataSourceFactory {
     }
 
     @Modified
-    protected void modified(Map<String, ?> config) throws Exception {
+    protected void modified(DataSourceFactoryConfig config, Map<String, ?> properties) throws Exception {
         String name = getDataSourceName(config);
         String svcPropName = getSvcPropName(config);
 
         if (!this.name.equals(name) || !this.svcPropName.equals(svcPropName)) {
             log.info("Change in datasource name/service property name detected. DataSource would be recreated");
             deactivate();
-            activate(bundleContext, config);
+            activate(bundleContext, config, properties);
             return;
         }
 
         //Other modifications can be applied at runtime itself
         //Tomcat Connection Pool is decoupled from DataSource so can be closed and reset
-        dataSource.setPoolProperties(createPoolConfig(config));
+        dataSource.setPoolProperties(createPoolConfig(properties));
         closeConnectionPool();
         dataSource.createPool();
         log.info("Updated DataSource [{}] with properties {}", name, dataSource.getPoolProperties().toString());
@@ -245,11 +145,11 @@ public class DataSourceFactory {
         dataSource.close();
     }
 
-    private PoolConfiguration createPoolConfig(Map<String, ?> config) {
+    private PoolConfiguration createPoolConfig(Map<String, ?> properties) {
         Properties props = new Properties();
 
         //Copy the other properties first
-        Map<String, String> otherProps = PropertiesUtil.toMap(config.get(PROP_DATASOURCE_SVC_PROPS), new String[0]);
+        Map<String, String> otherProps = PropertiesUtil.toMap(properties.get(PROP_DATASOURCE_SVC_PROPS), new String[0]);
         for (Map.Entry<String, String> e : otherProps.entrySet()) {
             set(e.getKey(), e.getValue(), props);
         }
@@ -257,7 +157,7 @@ public class DataSourceFactory {
         props.setProperty(org.apache.tomcat.jdbc.pool.DataSourceFactory.OBJECT_NAME, name);
 
         for (String propName : DummyDataSourceFactory.getPropertyNames()) {
-            String value = PropertiesUtil.toString(config.get(propName), null);
+            String value = PropertiesUtil.toString(properties.get(propName), null);
             set(propName, value, props);
         }
 
@@ -274,7 +174,7 @@ public class DataSourceFactory {
     }
 
     private void registerDataSource(String svcPropName) {
-        Dictionary<String, Object> svcProps = new Hashtable<String, Object>();
+        Dictionary<String, Object> svcProps = new Hashtable<>();
         svcProps.put(svcPropName, name);
         svcProps.put(Constants.SERVICE_VENDOR, "Apache Software Foundation");
         svcProps.put(Constants.SERVICE_DESCRIPTION, "DataSource service based on Tomcat JDBC");
@@ -287,7 +187,7 @@ public class DataSourceFactory {
             //jmx not enabled
             return;
         }
-        Hashtable<String, String> table = new Hashtable<String, String>();
+        Hashtable<String, String> table = new Hashtable<>();
         table.put("type", "ConnectionPool");
         table.put("class", javax.sql.DataSource.class.getName());
         table.put("name", ObjectName.quote(name));
@@ -321,12 +221,12 @@ public class DataSourceFactory {
 
     //~----------------------------------------< Config Handling >
 
-    static String getDataSourceName(Map<String, ?> config) {
-        return PropertiesUtil.toString(config.get(PROP_DATASOURCE_NAME), null);
+    static String getDataSourceName(DataSourceFactoryConfig config) {
+        return config.datasource_name();
     }
 
-    static String getSvcPropName(Map<String, ?> config) {
-        return PropertiesUtil.toString(config.get(PROP_DS_SVC_PROP_NAME), PROP_DATASOURCE_NAME);
+    static String getSvcPropName(DataSourceFactoryConfig config) {
+        return config.datasource_svc_prop_name();
     }
 
     private static void set(String name, String value, Properties props) {
