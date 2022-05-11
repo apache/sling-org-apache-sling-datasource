@@ -26,7 +26,9 @@ import java.util.Properties;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NameClassPair;
 import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
@@ -72,10 +74,10 @@ public class JNDIDataSourceFactory {
         @AttributeDefinition
         String datasource_svc_prop_name() default PROP_DATASOURCE_NAME;
 
-        @AttributeDefinition( name = "JNDI Name (*)", description = "JNDI location name used to perform DataSource instance lookup")
+        @AttributeDefinition(name = "JNDI Name (*)", description = "JNDI location name used to perform DataSource instance lookup")
         String datasource_jndi_name() default PROP_DATASOURCE_NAME;
 
-        @AttributeDefinition( name = "JNDI Properties", description = "Set the environment for the JNDI InitialContext i.e. properties passed on to " +
+        @AttributeDefinition(name = "JNDI Properties", description = "Set the environment for the JNDI InitialContext i.e. properties passed on to " +
                 "InitialContext for performing the JNDI instance lookup. Each row form a map entry where each row format be propertyName=property" +
                 " e.g. java.naming.factory.initial=exampleFactory", cardinality = 1024)
         String[] jndi_properties() default {};
@@ -146,8 +148,6 @@ public class JNDIDataSourceFactory {
 
         return props;
     }
-
-    //~----------------------------------------< Config Handling >
 
     private static void set(String name, String value, Properties props) {
         if (value != null) {
