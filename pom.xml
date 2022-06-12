@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.sling</groupId>
     <artifactId>sling-bundle-parent</artifactId>
-    <version>47</version>
+    <version>48</version>
     <relativePath />
   </parent>
 
@@ -46,7 +46,6 @@
     <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-datasource.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-datasource.git</developerConnection>
     <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-datasource.git</url>
-    <tag>HEAD</tag>
   </scm>
 
   <build>
