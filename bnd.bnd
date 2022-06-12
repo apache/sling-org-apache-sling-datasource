@@ -2,8 +2,4 @@ Bundle-DocURL: https://sling.apache.org/documentation/bundles/datasource-provide
 Export-Package: !org.apache.juli.logging
 
 -includeresource:\
-    @org.apache.sling.commons.osgi-*.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
     @tomcat-jdbc-*.jar;inline=true
-
--removeheaders:\
-  Include-Resource

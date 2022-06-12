@@ -18,7 +18,6 @@
  */
 package org.apache.sling.datasource.internal;
 
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.tomcat.jdbc.pool.ConnectionPool;
 import org.apache.tomcat.jdbc.pool.DataSource;
 import org.apache.tomcat.jdbc.pool.PoolConfiguration;
@@ -48,6 +47,7 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.sling.datasource.internal.JNDIDataSourceFactory.PROP_DATASOURCE_NAME;
 
@@ -101,7 +101,7 @@ public class DataSourceFactory {
         name = getDataSourceName(config);
 
         checkArgument(name != null, "DataSource name must be specified via [%s] property", PROP_DATASOURCE_NAME);
-        dataSource = new LazyJmxRegisteringDataSource(createPoolConfig(properties));
+        dataSource = new LazyJmxRegisteringDataSource(createPoolConfig(config, properties));
 
         svcPropName = getSvcPropName(config);
         registerDataSource(svcPropName);
@@ -123,7 +123,7 @@ public class DataSourceFactory {
 
         //Other modifications can be applied at runtime itself
         //Tomcat Connection Pool is decoupled from DataSource so can be closed and reset
-        dataSource.setPoolProperties(createPoolConfig(properties));
+        dataSource.setPoolProperties(createPoolConfig(config, properties));
         closeConnectionPool();
         dataSource.createPool();
         log.info("Updated DataSource [{}] with properties {}", name, dataSource.getPoolProperties().toString());
@@ -145,11 +145,16 @@ public class DataSourceFactory {
         dataSource.close();
     }
 
-    private PoolConfiguration createPoolConfig(Map<String, ?> properties) {
+    private PoolConfiguration createPoolConfig(DataSourceFactoryConfig config, Map<String, ?> properties) {
         Properties props = new Properties();
 
         //Copy the other properties first
-        Map<String, String> otherProps = PropertiesUtil.toMap(properties.get(PROP_DATASOURCE_SVC_PROPS), new String[0]);
+        Map<String, String> otherProps = Arrays.asList(config.datasource_svc_properties())
+                .stream()
+                .map(element -> element.split("="))
+                .filter(element -> element[1] != null && !element[1].isEmpty())
+                .collect(Collectors.toMap(element -> element[0], element -> element[1]));
+
         for (Map.Entry<String, String> e : otherProps.entrySet()) {
             set(e.getKey(), e.getValue(), props);
         }
@@ -157,8 +162,10 @@ public class DataSourceFactory {
         props.setProperty(org.apache.tomcat.jdbc.pool.DataSourceFactory.OBJECT_NAME, name);
 
         for (String propName : DummyDataSourceFactory.getPropertyNames()) {
-            String value = PropertiesUtil.toString(properties.get(propName), null);
-            set(propName, value, props);
+            if (properties.get(propName) != null) {
+                String value = properties.get(propName).toString();
+                set(propName, value, props);
+            }
         }
 
         //Specify the DataSource such that connection creation logic is handled

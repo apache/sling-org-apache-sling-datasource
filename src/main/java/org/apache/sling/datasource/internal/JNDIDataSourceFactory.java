@@ -19,10 +19,10 @@
 
 package org.apache.sling.datasource.internal;
 
+import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.Map;
-import java.util.Properties;
+import java.util.stream.Collectors;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -30,7 +30,6 @@ import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -112,10 +111,10 @@ public class JNDIDataSourceFactory {
     }
 
     private DataSource lookupDataSource(String jndiName, Config config) throws NamingException {
-        Properties jndiProps = createJndiEnv(config);
+        Hashtable<String, String> jndiProps = createJndiEnv(config);
         Context context = null;
         try {
-            log.debug("Looking up DataSource [{}] with InitialContext env [{}]", jndiName, jndiProps);
+            log.info("Looking up DataSource [{}] with InitialContext env [{}]", jndiName, jndiProps);
             context = new InitialContext(jndiProps);
             Object lookup = context.lookup(jndiName);
             if (lookup == null) {
@@ -135,25 +134,13 @@ public class JNDIDataSourceFactory {
         }
     }
 
-    private Properties createJndiEnv(Config config) {
-        Properties props = new Properties();
+    private Hashtable<String, String> createJndiEnv(Config config) {
+        Hashtable<String, String> jndiEnvProps = Arrays.asList(config.jndi_properties())
+                .stream()
+                .map(element -> element.split("="))
+                .filter(element -> element[1] != null && !element[1].isEmpty())
+                .collect(Collectors.toMap(element -> element[0], element -> element[1], (a, b) -> a, Hashtable::new));
 
-        //Copy the other properties first
-        Map<String, String> otherProps = PropertiesUtil.toMap(config.jndi_properties(), new String[0]);
-        for (Map.Entry<String, String> e : otherProps.entrySet()) {
-            set(e.getKey(), e.getValue(), props);
-        }
-
-        return props;
-    }
-
-    private static void set(String name, String value, Properties props) {
-        if (value != null) {
-            value = value.trim();
-        }
-
-        if (value != null && !value.isEmpty()) {
-            props.setProperty(name, value);
-        }
+        return jndiEnvProps;
     }
 }
