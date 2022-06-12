@@ -26,9 +26,7 @@ import java.util.Properties;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.naming.NameClassPair;
 import javax.naming.NameNotFoundException;
-import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
@@ -124,7 +122,7 @@ public class JNDIDataSourceFactory {
                 throw new NameNotFoundException("JNDI object with [" + jndiName + "] not found");
             }
 
-            if (!DataSource.class.isInstance(lookup)) {
+            if (!(lookup instanceof DataSource)) {
                 throw new IllegalStateException("JNDI object of type " + lookup.getClass() +
                         "is not an instance of javax.sql.DataSource");
             }

@@ -20,11 +20,8 @@ package org.apache.sling.datasource.internal;
 
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.naming.Context;
 import java.util.Dictionary;
@@ -32,32 +29,10 @@ import java.util.Hashtable;
 
 import static org.junit.Assert.assertNotNull;
 
-@RunWith(MockitoJUnitRunner.class)
 public class JNDIDataSourceFactoryTest {
 
     @Rule
     public final OsgiContext osgiContext = new OsgiContext();
-
-    private JNDIDataSourceFactory jndiDataSourceFactory;
-    private DataSourceFactory dataSourceFactory;
-
-    @Before
-    public void setUp() throws Exception {
-        Dictionary<String, Object> properties = new Hashtable<>();
-        properties.put("datasource.name", "ds");
-        properties.put("datasource.jndi.name", "java:/comp/env/ds");
-
-        properties.put("jndi.properties", new String[]{
-                "java.naming.factory.initial=org.osjava.sj.SimpleContextFactory",
-                "org.osjava.sj.delimiter=.",
-                "jndi.syntax.separator=/",
-                "org.osjava.sj.space=java:/comp/env",
-                "org.osjava.sj.jndi.shared=true",
-                "org.osjava.sj.root=src/test/resources/datasource.properties"
-        });
-
-        jndiDataSourceFactory = osgiContext.registerInjectActivateService(new JNDIDataSourceFactory(), properties);
-    }
 
     @After
     public void tearDown() {
@@ -66,7 +41,35 @@ public class JNDIDataSourceFactoryTest {
 
     @Test
     public void testIfServiceActive() {
+        Dictionary<String, Object> properties = new Hashtable<>();
+        properties.put("datasource.name", "ds");
+        properties.put("datasource.jndi.name", "java:/comp/env/ds");
+
+        defaultJNDIProperties(properties);
+        JNDIDataSourceFactory jndiDataSourceFactory = osgiContext.registerInjectActivateService(new JNDIDataSourceFactory(), properties);
+
         assertNotNull(jndiDataSourceFactory);
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testIllegalStateException() {
+        Dictionary<String, Object> properties = new Hashtable<>();
+        properties.put("datasource.name", "ds");
+        properties.put("datasource.jndi.name", "java:/comp/env");
+
+        defaultJNDIProperties(properties);
+        osgiContext.registerInjectActivateService(new JNDIDataSourceFactory(), properties);
+    }
+
+    private void defaultJNDIProperties(Dictionary<String, Object> properties) {
+        properties.put("jndi.properties", new String[]{
+                "java.naming.factory.initial=org.osjava.sj.SimpleContextFactory",
+                "org.osjava.sj.delimiter=.",
+                "jndi.syntax.separator=/",
+                "org.osjava.sj.space=java:/comp/env",
+                "org.osjava.sj.jndi.shared=true",
+                "org.osjava.sj.root=src/test/resources/datasource.properties"
+        });
     }
 
 }
