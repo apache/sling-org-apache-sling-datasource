@@ -18,59 +18,61 @@
  */
 package org.apache.sling.datasource;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Inject;
 import javax.sql.DataSource;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerClass;
 import org.osgi.framework.Filter;
 import org.osgi.service.cm.Configuration;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.util.tracker.ServiceTracker;
 
 import static org.apache.commons.beanutils.BeanUtils.getProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.ops4j.pax.exam.CoreOptions.options;
 
 @RunWith(PaxExam.class)
-public class DataSourceIT extends DataSourceTestBase{
-
-    static {
-        //paxRunnerVmOption = DEBUG_VM_OPTION;
-    }
-
+@ExamReactorStrategy(PerClass.class)
+public class DataSourceTestIT extends DataSourceTestSupport {
 
     String PID = "org.apache.sling.datasource.DataSourceFactory";
 
-    @Inject
-    ConfigurationAdmin ca;
+    @org.ops4j.pax.exam.Configuration
+    public Option[] configuration() throws IOException {
+        return options(
+                baseConfiguration()
+        );
+    }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testDataSourceAsService() throws Exception{
-        Configuration config = ca.createFactoryConfiguration(PID, null);
-        Dictionary<String, Object> p = new Hashtable<String, Object>();
-        p.put("url","jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
-        p.put("datasource.name","test");
-        p.put("initialSize","5");
-        p.put("defaultAutoCommit","default");
-        p.put("defaultReadOnly","false");
-        p.put("datasource.svc.properties",new String[]{
+        Configuration config = configurationAdmin.createFactoryConfiguration(PID, null);
+        Dictionary<String, Object> properties = new Hashtable<>();
+        properties.put("url","jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
+        properties.put("datasource.name","test");
+        properties.put("initialSize","5");
+        properties.put("defaultAutoCommit","default");
+        properties.put("defaultReadOnly","false");
+        properties.put("datasource.svc.properties",new String[]{
                 "initSQL=SELECT 1",
         });
-        p.put("maxActive",70);
-        config.update(p);
+        properties.put("maxActive",70);
+        config.update(properties);
 
-        Filter filter = context.createFilter("(&(objectclass=javax.sql.DataSource)(datasource.name=test))");
-        ServiceTracker<DataSource, DataSource> st =
-                new ServiceTracker<DataSource, DataSource>(context, filter, null);
+        Filter filter = bundleContext.createFilter("(&(objectclass=javax.sql.DataSource)(datasource.name=test))");
+        ServiceTracker<DataSource, DataSource> st = new ServiceTracker<>(bundleContext, filter, null);
         st.open();
 
         DataSource ds = st.waitForService(10000);
@@ -86,7 +88,7 @@ public class DataSourceIT extends DataSourceTestBase{
         assertEquals("false", getProperty(ds, "poolProperties.defaultReadOnly"));
         assertNull(getProperty(ds, "poolProperties.defaultAutoCommit"));
 
-        config = ca.listConfigurations("(datasource.name=test)")[0];
+        config = configurationAdmin.listConfigurations("(datasource.name=test)")[0];
         Dictionary dic = config.getProperties();
         dic.put("defaultReadOnly", Boolean.TRUE);
         config.update(dic);

@@ -1,0 +1,5 @@
+Bundle-DocURL: https://sling.apache.org/documentation/bundles/datasource-providers.html
+Export-Package: !org.apache.juli.logging
+
+-includeresource:\
+    @tomcat-jdbc-*.jar;inline=true

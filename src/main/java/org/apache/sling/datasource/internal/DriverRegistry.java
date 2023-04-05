@@ -30,29 +30,26 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Service;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.util.tracker.BundleTracker;
 import org.osgi.util.tracker.BundleTrackerCustomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component
-@Service(value = DriverRegistry.class)
+@Component(service = {DriverRegistry.class})
 public class DriverRegistry {
-    private static final String DRIVER_SERVICE = "META-INF/services/"
-            + Driver.class.getName();
+    private static final String DRIVER_SERVICE = "META-INF/services/" + Driver.class.getName();
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private BundleTracker<Collection<DriverInfo>> bundleTracker;
 
-    private ConcurrentMap<DriverInfo, Driver> driverInfos = new ConcurrentHashMap<DriverInfo, Driver>();
+    private ConcurrentMap<DriverInfo, Driver> driverInfos = new ConcurrentHashMap<>();
 
     public Collection<Driver> getDrivers() {
         return driverInfos.values();
@@ -60,8 +57,7 @@ public class DriverRegistry {
 
     @Activate
     protected void activate(BundleContext bundleContext) {
-        bundleTracker = new BundleTracker<Collection<DriverInfo>>(bundleContext,
-                Bundle.ACTIVE, new DriverBundleTracker());
+        bundleTracker = new BundleTracker<>(bundleContext, Bundle.ACTIVE, new DriverBundleTracker());
         bundleTracker.open();
     }
 
